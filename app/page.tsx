@@ -226,24 +226,6 @@ export default function Home() {
             </form>
           </div>
         </div>
-
-        <div className="mb-6 flex flex-wrap gap-3">
-          {ageOptions.map((option) => (
-            <button
-              key={option.month}
-              type="button"
-              onClick={() => setSelectedMonth(option.month)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                option.month === selectedMonth
-                  ? 'bg-stone-900 text-white'
-                  : 'bg-white text-stone-600 ring-1 ring-stone-200 hover:bg-orange-50'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
         <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <aside className="space-y-6">
             <section className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
