@@ -66,6 +66,14 @@ type MealPlanRequestBody = {
   recentMealNames?: unknown;
 };
 
+const MAX_RETRY_COUNT = 3;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
@@ -151,32 +159,48 @@ export async function POST(request: Request) {
         ? `최근 추천받아 이번에는 피하고 싶은 메뉴: ${recentMealNames.join(', ')}`
         : '최근 추천받아 피할 메뉴: 없음';
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        `${month}개월 아기를 위한 하루 이유식 식단을 추천해 주세요.`,
-        pantryLine,
-        excludedLine,
-        recentMealsLine,
-        '요청 조건:',
-        '- 최근 추천 메뉴와 같은 이름의 메뉴는 되도록 다시 추천하지 말 것',
-        '- 제외 재료는 식단에서 빼고, 보유 재료가 있으면 가능한 한 우선 활용할 것',
-        '- 끼니별 이름, 주요 재료, 추천 이유, 조리 팁, 주의사항을 알려 줄 것',
-        '- 쌀, 채소, 단백질 식재료의 균형을 고려할 것',
-        '- 지나치게 어려운 재료나 자극적인 재료는 피할 것',
-      ].join('\n'),
-      config: {
-        systemInstruction:
-          '당신은 한국 이유식 식단을 제안하는 도우미입니다. 반드시 한국어로 답하고, 개월수에 맞는 식감과 재료를 반영하세요. 의료 진단은 하지 말고 일반적인 식단 예시만 제안하세요. 최근 추천 메뉴와 겹치지 않는 다양성을 우선하세요.',
-        responseMimeType: 'application/json',
-        responseJsonSchema: {
-          ...mealPlanSchema,
-          propertyOrdering: ['ageLabel', 'summary', 'meals', 'cautions'],
-        } satisfies GeminiMealPlanSchema,
-      },
-    });
+    let response: Awaited<ReturnType<typeof ai.models.generateContent>> | null =
+      null;
 
-    if (!response.text) {
+    for (let attempt = 0; attempt < MAX_RETRY_COUNT; attempt += 1) {
+      try {
+        response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            `${month}개월 아기를 위한 하루 이유식 식단을 추천해 주세요.`,
+            pantryLine,
+            excludedLine,
+            recentMealsLine,
+            '요청 조건:',
+            '- 최근 추천 메뉴와 같은 이름의 메뉴는 되도록 다시 추천하지 말 것',
+            '- 제외 재료는 식단에서 빼고, 보유 재료가 있으면 가능한 한 우선 활용할 것',
+            '- 끼니별 이름, 주요 재료, 추천 이유, 조리 팁, 주의사항을 알려 줄 것',
+            '- 쌀, 채소, 단백질 식재료의 균형을 고려할 것',
+            '- 지나치게 어려운 재료나 자극적인 재료는 피할 것',
+          ].join('\n'),
+          config: {
+            systemInstruction:
+              '당신은 한국 이유식 식단을 제안하는 도우미입니다. 반드시 한국어로 답하고, 개월수에 맞는 식감과 재료를 반영하세요. 의료 진단은 하지 말고 일반적인 식단 예시만 제안하세요. 최근 추천 메뉴와 겹치지 않는 다양성을 우선하세요.',
+            responseMimeType: 'application/json',
+            responseJsonSchema: {
+              ...mealPlanSchema,
+              propertyOrdering: ['ageLabel', 'summary', 'meals', 'cautions'],
+            } satisfies GeminiMealPlanSchema,
+          },
+        });
+        break;
+      } catch (error) {
+        const geminiError = error as GeminiErrorLike;
+
+        if (geminiError.status !== 503 || attempt === MAX_RETRY_COUNT - 1) {
+          throw error;
+        }
+
+        await sleep(700 * (attempt + 1));
+      }
+    }
+
+    if (!response?.text) {
       return NextResponse.json(
         { error: 'Gemini 응답이 비어 있어요. 잠시 후 다시 시도해 주세요.' },
         { status: 502 }
@@ -223,6 +247,16 @@ export async function POST(request: Request) {
             'Gemini 요청 형식이 올바르지 않아요. 입력값과 설정을 다시 확인해 주세요.',
         },
         { status: 400 }
+      );
+    }
+
+    if (geminiError.status === 503) {
+      return NextResponse.json(
+        {
+          error:
+            'Gemini 요청이 많아 3번 다시 시도했지만 아직 응답을 받지 못했어요. 잠시 후 다시 시도해 주세요.',
+        },
+        { status: 503 }
       );
     }
 
