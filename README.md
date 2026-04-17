@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Baby Meal Planner
 
-## Getting Started
+개월수, 보유 재료, 제외 재료, 최근 추천 이력을 바탕으로 Gemini API가 이유식 식단을 추천해주는 Next.js 앱입니다.
 
-First, run the development server:
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+개발 서버는 `http://localhost:3001` 에서 실행됩니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env.local` 파일에 아래 값을 넣어주세요.
 
-## Learn More
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+NEXT_PUBLIC_ENABLE_PWA=false
+```
 
-To learn more about Next.js, take a look at the following resources:
+- `GEMINI_API_KEY`: Google AI Studio에서 발급한 서버용 API 키
+- `NEXT_PUBLIC_ENABLE_PWA`: 현재는 `false` 권장. Vercel 배포 시에도 기본적으로 꺼두는 편이 안전합니다.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Vercel Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. Git 저장소 연결
 
-## Deploy on Vercel
+이 프로젝트를 GitHub 등에 푸시한 뒤 Vercel에서 저장소를 연결합니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. Framework Preset
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Vercel이 자동으로 `Next.js`를 감지하면 그대로 사용하면 됩니다.
+
+### 3. Environment Variables 등록
+
+Vercel 프로젝트 설정에서 아래 환경변수를 추가합니다.
+
+- `GEMINI_API_KEY`
+- `NEXT_PUBLIC_ENABLE_PWA=false`
+
+### 4. Deploy
+
+기본 설정 그대로 배포하면 됩니다.
+
+- Build Command: `next build`
+- Output: Next.js 기본값 사용
+
+## Notes
+
+- 식단 생성 API는 [`app/api/meal-plan/route.ts`](./app/api/meal-plan/route.ts) 에 있습니다.
+- 최근 추천 메뉴 제외 기능은 브라우저 `localStorage`를 사용합니다.
+- 같은 메뉴 반복을 줄이기 위해 최근 추천 메뉴 이름을 다음 요청에 함께 보냅니다.
+
+## Verification
+
+배포 전 로컬에서 아래 명령으로 확인할 수 있습니다.
+
+```bash
+npm run lint
+npm run build
+```
