@@ -22,11 +22,6 @@ type MealPlanErrorResponse = {
 };
 
 const ageOptions = [
-  { month: 4, label: '4개월', detail: '초기 시작 준비' },
-  { month: 5, label: '5개월', detail: '초기 이유식' },
-  { month: 6, label: '6개월', detail: '초기 이유식' },
-  { month: 7, label: '7개월', detail: '중기 이유식' },
-  { month: 8, label: '8개월', detail: '중기 이유식' },
   { month: 9, label: '9개월', detail: '후기 이유식' },
   { month: 10, label: '10개월', detail: '후기 이유식' },
   { month: 11, label: '11개월', detail: '완료기 이유식' },
